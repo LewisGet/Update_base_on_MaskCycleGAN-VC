@@ -411,16 +411,16 @@ class W2V2PADTraining(object):
             self.b_mel = b_mel.unsqueeze(0).to(self.device, dtype=torch.float32)
 
             # 音色不修改 pad
-            self.fake_b = self.g_a2b(self.a_mel, none_change)
-            self.fake_a = self.g_b2a(self.b_mel, none_change)
+            self.fake_b = self.g_a2b(self.a_mel.clone(), none_change)
+            self.fake_a = self.g_b2a(self.b_mel.clone(), none_change)
             self.fake_ba = self.g_b2a(self.fake_b, none_change)
             self.fake_ab = self.g_a2b(self.fake_a, none_change)
             self.test_b = self.g_a2b(torch.ones_like(self.a_mel), none_change)
             self.test_a = self.g_b2a(torch.ones_like(self.b_mel), none_change)
 
             # 修改 pad
-            self.change_a = self.g_a_vec(self.a_mel, pad_change)
-            self.change_b = self.g_b_vec(self.b_mel, pad_change)
+            self.change_a = self.g_a_vec(self.a_mel.clone(), pad_change)
+            self.change_b = self.g_b_vec(self.b_mel.clone(), pad_change)
 
             fidelity = self.true_loss(self.d_a(self.fake_a), self.d_b(self.fake_b))
             fidelity_pow = self.true_loss(self.d_a(self.fake_ab), self.d_b(self.fake_ba))
@@ -429,22 +429,28 @@ class W2V2PADTraining(object):
 
         # pad loss
         with torch.set_grad_enabled(False):
-            a_vec = self.mel2wav2vec(self.a_mel[0], "a")
-            b_vec = self.mel2wav2vec(self.b_mel[0], "b")
+            _a = torch.tensor(self.a_mel[0]).to(self.device, dtype=torch.float32)
+            _b = torch.tensor(self.b_mel[0]).to(self.device, dtype=torch.float32)
+
+            a_vec = self.mel2wav2vec(_a, "a")
+            b_vec = self.mel2wav2vec(_b, "b")
 
             a_pad = self.vec2pad(a_vec)
             b_pad = self.vec2pad(b_vec)
 
-            del a_vec, b_vec
+            del a_vec, b_vec, _a, _b
             torch.cuda.empty_cache()
 
-            change_a_vec = self.mel2wav2vec(self.change_a[0], "a")
-            change_b_vec = self.mel2wav2vec(self.change_b[0], "b")
+            _change_a = torch.tensor(self.change_a[0]).to(self.device, dtype=torch.float32)
+            _change_b = torch.tensor(self.change_b[0]).to(self.device, dtype=torch.float32)
+
+            change_a_vec = self.mel2wav2vec(_change_a, "a")
+            change_b_vec = self.mel2wav2vec(_change_b, "b")
 
             change_a_pad = self.vec2pad(change_a_vec)
             change_b_pad = self.vec2pad(change_b_vec)
 
-            del change_a_vec, change_b_vec
+            del change_a_vec, change_b_vec, _change_a, _change_b
             torch.cuda.empty_cache()
 
         with torch.set_grad_enabled(True):
@@ -472,7 +478,7 @@ class W2V2PADTraining(object):
             # d train
 
             self.pre_train_d()
-            d_real_loss = self.true_loss(self.d_a(self.a_mel.detach()), self.d_b(self.b_mel.detach()))
+            d_real_loss = self.true_loss(self.d_a(self.a_mel.clone().detach()), self.d_b(self.b_mel.clone().detach()))
             d_fake_loss = self.false_loss(self.d_a(self.fake_a.detach()), self.d_b(self.fake_b.detach()))
             d_change_loss = self.false_loss(self.d_a(self.change_a.detach()), self.d_b(self.change_b.detach()))
 
