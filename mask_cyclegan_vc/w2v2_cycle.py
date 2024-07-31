@@ -329,10 +329,10 @@ class W2V2PADTraining(object):
 
     def model_collapse_modifies_lr(self):
         for i, v in enumerate(self.g_optimizer.param_groups):
-            self.g_optimizer.param_groups[i]['lr'] = v * 1.25
+            self.g_optimizer.param_groups[i]['lr'] = v['lr'] * 1.25
 
         for i, v in enumerate(self.d_optimizer.param_groups):
-            self.d_optimizer.param_groups[i]['lr'] = v * 1.25
+            self.d_optimizer.param_groups[i]['lr'] = v['lr'] * 1.25
 
     def modify_model_collapse_epoch(self):
         return self.logger.epoch % 70 == 0 and self.logger.epoch != 0
